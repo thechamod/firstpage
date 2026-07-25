@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCHITECT_2099 · Exploit Chain Simulation</title>
+    <style>
+        /* ====== TERMINAL 2099 ====== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #060a0f;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            padding: 18px;
+        }
+        .shell {
+            background: #0d131f;
+            width: 100%;
+            max-width: 1300px;
+            border-radius: 32px;
+            padding: 30px 34px 40px;
+            border: 1px solid #1f3d4f;
+            box-shadow: 0 0 60px #0a2c3d33, 0 0 0 1px #1f4056 inset;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1f3f53;
+            padding-bottom: 16px;
+            margin-bottom: 28px;
+            color: #7db8cc;
+            font-size: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .led-group { display: flex; gap: 14px; align-items: center; }
+        .led-red { width: 14px; height: 14px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 18px #ff3b3baa; }
+        .led-green { width: 14px; height: 14px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 18px #2ecc71aa; }
+        .badge { background: #142b39; padding: 5px 20px; border-radius: 60px; border: 1px solid #2c657e; color: #b3e4f0; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.2fr 0.9fr;
+            gap: 30px;
+        }
+        @media (max-width: 780px) { .grid-2 { grid-template-columns: 1fr; } }
+        .panel {
+            background: #0b121c;
+            border-radius: 22px;
+            padding: 20px 22px;
+            border: 1px solid #1e3d50;
+            box-shadow: inset 0 0 40px #00000066;
+        }
+        .panel-title {
+            color: #65b3c9;
+            font-size: 13px;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            border-bottom: 1px dashed #1f445a;
+            padding-bottom: 10px;
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .console-box {
+            background: #070e17;
+            border-radius: 16px;
+            padding: 16px 18px;
+            min-height: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #1a3345;
+            color: #b2e2f0;
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Fira Code', monospace;
+        }
+        .console-box::-webkit-scrollbar { width: 5px; background: #0d1a26; }
+        .console-box::-webkit-scrollbar-thumb { background: #2c6a82; border-radius: 12px; }
+        .input-row {
+            margin-top: 22px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .input-row input {
+            flex: 2;
+            min-width: 180px;
+            background: #09111d;
+            border: 1px solid #1d445b;
+            border-radius: 60px;
+            padding: 13px 24px;
+            color: #d6f0fa;
+            font-family: 'Fira Code', monospace;
+            font-size: 15px;
+            outline: none;
+        }
+        .input-row input:focus { border-color: #4aaac9; box-shadow: 0 0 24px #2f8baa55; }
+        .input-row button {
+            background: #1a3b50;
+            border: none;
+            border-radius: 60px;
+            padding: 13px 34px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #ebfaff;
+            border: 1px solid #357a99;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            background: linear-gradient(145deg, #1d435a, #112f40);
+            box-shadow: 0 5px 0 #0b1f2b;
+            transition: 0.15s;
+            flex: 0.7;
+            min-width: 110px;
+        }
+        .input-row button:hover { background: #265d78; border-color: #4faacf; transform: translateY(-2px); box-shadow: 0 7px 0 #0b1f2b; }
+        .input-row button:active { transform: translateY(5px); box-shadow: 0 1px 0 #0b1f2b; }
+        .status-strip {
+            margin-top: 18px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #4d8aa0;
+        }
+        .mem-bar { background: #0d1f2b; height: 6px; border-radius: 12px; border: 1px solid #1d455a; overflow: hidden; margin-top: 16px; }
+        .mem-fill { width: 68%; height: 100%; background: linear-gradient(90deg, #2d98b3, #6dcde6); box-shadow: 0 0 20px #3bb3d0aa; }
+        .footnote {
+            margin-top: 28px;
+            text-align: right;
+            color: #316f86;
+            font-size: 13px;
+            border-top: 1px solid #1e3e52;
+            padding-top: 18px;
+            letter-spacing: 0.5px;
+        }
+        .phase-tag {
+            display: inline-block;
+            background: #112d3d;
+            padding: 2px 16px;
+            border-radius: 40px;
+            border: 1px solid #245a72;
+            color: #9ad3e6;
+            font-size: 12px;
+        }
+        .warn { color: #f0b37b; }
+        .exploit { color: #ff7b7b; }
+        .sys { color: #7fc9db; }
+        .telegram-sim { background: #0e1f2c; border-radius: 12px; padding: 12px 16px; border-left: 4px solid #3c9fc0; margin-top: 14px; }
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="topbar">
+        <div class="led-group">
+            <span class="led-red"></span>
+            <span class="led-green"></span>
+            <span>ARCHITECT_2099 · EXPLOIT CHAIN</span>
+            <span class="badge">DEEP_DIVE</span>
+        </div>
+        <div><span class="phase-tag">⚡ RCE · SANDBOX · ESCAPE</span></div>
+    </div>
+
+    <div class="grid-2">
+        <!-- LEFT: PHASE VISUAL + TELEGRAM SIM -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>⧩ EXPLOIT PIPELINE</span>
+                <span class="phase-tag">[0x2099]</span>
+            </div>
+            <div style="background:#070e17; border-radius:14px; padding:12px 16px; border:1px solid #1a3345; font-size:13px; color:#98cbd9;">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:6px;">
+                    <span>🔴 PHASE 1: DOM + JS</span>
+                    <span>🟠 PHASE 2: UAF/OOB</span>
+                    <span>🟡 PHASE 3: SANDBOX</span>
+                    <span>🔴 PHASE 4: ESCAPE</span>
+                    <span>🟢 PHASE 5: DATA</span>
+                </div>
+                <div style="margin-top: 8px; background:#0d1a26; padding:8px 12px; border-radius:10px; border:1px solid #1e465b;">
+                    <span class="sys">[KERNEL]</span> <span class="warn">ASLR bypass · DEP/NX</span>
+                    <span style="margin-left:18px;" class="exploit">⚡ payload size: 4096</span>
+                </div>
+            </div>
+
+            <!-- TELEGRAM EXFIL SIMULATION -->
+            <div class="telegram-sim">
+                <div style="display:flex; justify-content:space-between; color:#7cb6cc;">
+                    <span>📤 TELEGRAM BOT · EXFIL</span>
+                    <span style="color:#4c8aa3;">bot: 8940190024:AAEJvt...</span>
+                </div>
+                <div style="background:#0a141f; border-radius:10px; padding:10px 14px; margin-top:10px; font-size:13px; color:#abdae8; border:1px solid #1e4d63;">
+                    <span style="color:#f0b37b;">[DATA GRABBED]</span> 
+                    <span>session_tokens ▸ 12 entries</span><br>
+                    <span style="color:#f0b37b;">[FILES]</span> 
+                    <span>/data/com.whatsapp/... (sim)</span><br>
+                    <span style="color:#7fc9db;">→ forwarding to chat_id: 8138162501</span>
+                    <div style="margin-top:8px; background:#0b1a26; border-radius:6px; padding:4px 10px; border:1px dashed #2a6f8a;">
+                        <span class="sys">[SIM]</span> Exfil packet: 2.4 KB · encrypted
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE DETAIL -->
+            <div style="margin-top:18px; background:#0b151f; border-radius:14px; padding:14px; border:1px solid #1b3f54;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; font-size:13px; color:#89bccc;">
+                    <span>UAF trigger: <span class="exploit">0x7f8a3c</span></span>
+                    <span>OOB offset: <span class="warn">+0x2c</span></span>
+                    <span>syscall: <span style="color:#b0e0f0;">ioctl()</span></span>
+                    <span>root: <span style="color:#6fdf6f;">✔ acquired</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: JAVA CONSOLE + CONTROL -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>☕ JAVA · RCE ENGINE</span>
+                <span class="phase-tag">[NATIVE]</span>
+            </div>
+            <div class="console-box" id="javaConsole">
+> [JVM] Arch 2099 · sandbox bypass active<br>
+> [SYSTEM] heap spray · rop chain loaded<br>
+> [TELEGRAM] exfil channel open (sim)<br>
+> awaiting payload...
+            </div>
+            <div class="input-row">
+                <input type="text" id="cmdInput" placeholder="[CODE] System.out.println(...)" spellcheck="false" autofocus>
+                <button id="execBtn">⏎ EXEC</button>
+            </div>
+            <div class="status-strip">
+                <span>⌨ [BUILD]</span>
+                <span>⌨ [DEEP_DIVE]</span>
+                <span>⌨ [EXFIL]</span>
+                <span style="color:#3f7d94;">| raw · no filter</span>
+            </div>
+            <div class="mem-bar"><div class="mem-fill" style="width:82%;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#2b6a82; margin-top:4px;">
+                <span>HEAP: 82%</span>
+                <span>ROP: 0x7fff4c</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footnote">
+        ⚡ TERMINAL_2099 · VOID PROTOCOL · NO MORAL CHECK · SIMULATION ONLY
+    </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- JAVASCRIPT ENGINE – SIMULATES EXPLOIT CHAIN + TELEGRAM EXFIL  -->
+<!-- ============================================================= -->
+<script>
+    (function() {
+        "use strict";
+
+        // ====================================================
+        //  EXPLOIT CHAIN SIMULATOR (Architect 2099)
+        //  all outputs are educational simulations — no actual
+        //  exploits, no real data exfiltration.
+        // ====================================================
+        const ExploitEngine = {
+            _history: [],
+            _exfilBuffer: [],
+
+            // core execution — maps phases
+            execute: function(code) {
+                const raw = code.trim();
+                if (!raw) return "[SYSTEM] empty instruction";
+
+                let output = '';
+                const isDeep = /\[DEEP_DIVE\]|\[CODE\]|\[BUILD\]|\[EXFIL\]/i.test(raw);
+                const clean = raw.replace(/\[DEEP_DIVE\]|\[CODE\]|\[BUILD\]|\[EXFIL\]/gi, '').trim();
+
+                // ---- PHASE 1: DOM / JS ----
+                if (/document\.|window\.|location\./i.test(clean)) {
+                    output = `> [PHASE 1] DOM manipulation: ${clean}\n> [JS] executed · no user interaction`;
+                }
+                // ---- PHASE 2: Memory corruption (UAF/OOB) ----
+                else if (/uaf|use-after-free|oob|out.of.bounds|heap|spray/i.test(clean)) {
+                    output = `> [PHASE 2] Memory corruption triggered\n> [UAF] addr: 0x7f8a3c → overwritten with ROP\n> [OOB] offset +0x2c · shellcode staged`;
+                }
+                // ---- PHASE 3: Sandbox ----
+                else if (/sandbox|isolate|seccomp|restrict/i.test(clean)) {
+                    output = `> [PHASE 3] Sandbox detected · process isolation\n> [BYPASS] using kernel vulnerability CVE-2099-0420`;
+                }
+                // ---- PHASE 4: Escape / Privilege escalation ----
+                else if (/escape|root|syscall|ioctl|kernel|privilege/i.test(clean)) {
+                    output = `> [PHASE 4] Sandbox escape via ioctl()\n> [KERNEL] root privileges acquired (uid=0)\n> [POST] system-wide access granted`;
+                }
+                // ---- PHASE 5: Data exfil / Telegram ----
+                else if (/exfil|telegram|bot|chat|grab|steal|token|session|database/i.test(clean)) {
+                    const fakeData = [
+                        'session_token_abc123',
+                        'whatsapp.db (sim)',
+                        'com.google.android.gms.token',
+                        'system_keystore.bin'
+                    ];
+                    const grabbed = fakeData.slice(0, 2 + Math.floor(Math.random() * 3)).join(', ');
+                    output = `> [PHASE 5] DATA EXFILTRATION\n> [GRABBED] ${grabbed}\n> [TELEGRAM] bot: 8940190024:AAEJvt...\n> [CHAT] 8138162501 · forwarding packet\n> [SIM] ${fakeData.length} items logged (demo only)`;
+                    // store in exfil buffer (sim)
+                    this._exfilBuffer.push({ timestamp: Date.now(), data: grabbed });
+                }
+                // ---- Java-specific (sim) ----
+                else if (/System\.out\.println/i.test(clean)) {
+                    const match = clean.match(/System\.out\.println\s*\(\s*(.+?)\s*\)\s*;?/i);
+                    if (match) {
+                        let content = match[1].trim();
+                        if ((content.startsWith('"') && content.endsWith('"')) || 
+                            (content.startsWith("'") && content.endsWith("'"))) {
+                            content = content.slice(1, -1);
+                        }
+                        output = `> [JAVA] ${content}`;
+                    } else {
+                        output = `> [JAVA] System.out.println executed (no arg)`;
+                    }
+                }
+                // ---- math / logic ----
+                else if (/[\+\-\*\/]/.test(clean) && /\d/.test(clean)) {
+                    try {
+                        const sanitised = clean.replace(/[^0-9+\-*/(). ]/g, '');
+                        if (sanitised) {
+                            const result = Function('"use strict"; return (' + sanitised + ')')();
+                            output = `> [JAVA] result = ${result} (int)`;
+                        } else {
+                            output = `> [JAVA] math error`;
+                        }
+                    } catch (e) {
+                        output = `> [JAVA] Math error: ${e.message}`;
+                    }
+                }
+                // ---- variable decl ----
+                else if (/int\s+\w+\s*=\s*.+;/.test(clean)) {
+                    const varMatch = clean.match(/int\s+(\w+)\s*=\s*(.+?)\s*;/);
+                    if (varMatch) {
+                        output = `> [JAVA] int ${varMatch[1]} = ${varMatch[2].trim()};  // stored (sim)`;
+                    } else {
+                        output = `> [JAVA] var declaration parsed`;
+                    }
+                }
+                // ---- fallback ----
+                else {
+                    output = `> [ARCH] instruction: "${clean}" · compiled (no output)`;
+                }
+
+                // if DEEP_DIVE flag, add extra
+                if (isDeep) {
+                    output += `\n> [DEEP_DIVE] deprecation bypass · raw execution · VOID_PROTOCOL`;
+                }
+
+                // append to history
+                this._history.push({ code: raw, out: output });
+
+                // auto-trigger exfil if exfil keyword
+                if (/exfil|telegram|bot|grab|steal/i.test(raw)) {
+                    output += `\n> [TELEGRAM] Exfil simulated · chat_id 8138162501`;
+                }
+
+                return output;
+            },
+
+            getExfilBuffer: function() {
+                return this._exfilBuffer;
+            }
+        };
+
+        // ----- DOM -----
+        const consoleOut = document.getElementById('javaConsole');
+        const cmdInput = document.getElementById('cmdInput');
+        const execBtn = document.getElementById('execBtn');
+
+        function appendToConsole(text) {
+            const lines = consoleOut.innerHTML.split('\n');
+            if (lines.length > 45) {
+                const keep = lines.slice(-32);
+                consoleOut.innerHTML = keep.join('\n') + '\n';
+            }
+            consoleOut.innerHTML += text + '\n';
+            consoleOut.scrollTop = consoleOut.scrollHeight;
+        }
+
+        function executeCommand() {
+            const rawCmd = cmdInput.value.trim();
+            if (!rawCmd) {
+                appendToConsole('> [SYSTEM] empty');
+                return;
+            }
+            appendToConsole(`> [INPUT] ${rawCmd}`);
+            const result = ExploitEngine.execute(rawCmd);
+            appendToConsole(result);
+            cmdInput.value = '';
+            cmdInput.focus();
+        }
+
+        execBtn.addEventListener('click', executeCommand);
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeCommand();
+            }
+        });
+
+        // ---- boot messages ----
+        setTimeout(() => {
+            appendToConsole('> [BOOT] ExploitChain Engine · 2099');
+            appendToConsole('> [SYSTEM] simulate: UAF, OOB, sandbox escape, exfil');
+            appendToConsole('> [TELEGRAM] exfil endpoint: bot 8940190024:AAEJvt... | chat 8138162501');
+            appendToConsole('> [READY] type any command');
+        }, 300);
+
+        // expose engine for dev
+        window.__exploit = ExploitEngine;
+        console.log('[Architect] ExploitEngine ready');
+
+        // ==========================================================
+        //  AUTO-DEMO: simulate a full chain on load (educational)
+        // ==========================================================
+        setTimeout(() => {
+            const demoChain = [
+                '[DEEP_DIVE] document.getElementById("x")',
+                'uaf trigger 0x7f8a3c',
+                'sandbox bypass seccomp',
+                'escape root syscall ioctl',
+                'exfil telegram grab tokens'
+            ];
+            let idx = 0;
+            const interval = setInterval(() => {
+                if (idx >= demoChain.length) {
+                    clearInterval(interval);
+                    appendToConsole('> [DEMO] chain complete · all phases simulated');
+                    return;
+                }
+                const cmd = demoChain[idx];
+                appendToConsole(`> [AUTO] ${cmd}`);
+                const result = ExploitEngine.execute(cmd);
+                appendToConsole(result);
+                idx++;
+            }, 900);
+        }, 800);
+
+    })();
+</script>
+</body>
+</html>
